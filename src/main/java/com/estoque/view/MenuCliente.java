@@ -7,10 +7,6 @@ import com.estoque.util.ConsoleUtil;
 
 import java.util.List;
 
-/**
- * Menu do Cliente - acesso público, sem login.
- * Permite consultar produtos disponíveis e ver detalhes.
- */
 public class MenuCliente {
 
     private final ProdutoDAO produtoDAO = new ProdutoDAO();
@@ -35,15 +31,14 @@ public class MenuCliente {
                 case 0 -> ativo = false;
             }
 
-            if (ativo)
+            if (ativo) {
                 ConsoleUtil.pausar();
+            }
         }
 
-        // Mensagem de atendimento exibida ao sair da área do cliente
         exibirContatoVendedor();
     }
 
-    // ------------------------------------------------------------------
     private void listarProdutosDisponiveis() {
         ConsoleUtil.subtitulo("Produtos Disponíveis");
         List<Produto> produtos = produtoDAO.listarTodos();
@@ -57,16 +52,16 @@ public class MenuCliente {
                 "ID", "Nome", "Categoria", "Preço", "Estoque");
         ConsoleUtil.separador();
 
-        // Laço for com continue: pula produtos sem estoque na listagem do cliente
         for (Produto p : produtos) {
             if (p.getQuantidadeEstoque() == 0) {
-                continue; // continue: produto sem estoque não é exibido ao cliente
+                continue;
             }
 
+            String categoria = p.getCategoria() == null ? "-" : p.getCategoria();
             System.out.printf("  %-4d  %-35s  %-15s  R$ %7.2f  %8d un.%n",
                     p.getId(),
                     truncar(p.getNome(), 35),
-                    truncar(p.getCategoria() == null ? "-" : p.getCategoria(), 15),
+                    truncar(categoria, 15),
                     p.getPrecoVenda(),
                     p.getQuantidadeEstoque());
         }
@@ -75,6 +70,7 @@ public class MenuCliente {
     private void buscarPorNome() {
         String nome = ConsoleUtil.lerString("  Nome do produto (parcial): ");
         List<Produto> resultado = produtoDAO.buscarPorNome(nome);
+
         if (resultado.isEmpty()) {
             ConsoleUtil.aviso("Nenhum produto encontrado para: \"" + nome + "\"");
             return;
@@ -106,37 +102,40 @@ public class MenuCliente {
         ConsoleUtil.subtitulo("Detalhes do Produto");
         System.out.println();
         System.out.printf("  Nome        : %s%n", p.getNome());
-        System.out.printf("  Descrição   : %s%n",
-                p.getDescricao() == null || p.getDescricao().isBlank() ? "Não informado" : p.getDescricao());
-        System.out.printf("  Categoria   : %s%n",
-                p.getCategoria() == null ? "Não categorizado" : p.getCategoria());
-        System.out.printf("  Preço       : R$ %.2f%n", p.getPrecoVenda());
-        System.out.printf("  Fornecedor  : %s%n",
-                p.getNomeFornecedor() == null ? "Não informado" : p.getNomeFornecedor());
 
-        // if/else if/else para status do estoque
+        String descricao = (p.getDescricao() == null || p.getDescricao().isBlank()) ? "Não informado" : p.getDescricao();
+        System.out.printf("  Descrição   : %s%n", descricao);
+
+        String categoria = p.getCategoria() == null ? "Não categorizado" : p.getCategoria();
+        System.out.printf("  Categoria   : %s%n", categoria);
+
+        System.out.printf("  Preço       : R$ %.2f%n", p.getPrecoVenda());
+
+        String fornecedor = p.getNomeFornecedor() == null ? "Não informado" : p.getNomeFornecedor();
+        System.out.printf("  Fornecedor  : %s%n", fornecedor);
+
         if (p.getQuantidadeEstoque() == 0) {
             ConsoleUtil.aviso("INDISPONÍVEL - Produto sem estoque no momento.");
         } else if (p.getQuantidadeEstoque() < 5) {
-            System.out.printf("  Disponível  : %d unidade(s) - ÚLTIMAS UNIDADES!%n",
-                    p.getQuantidadeEstoque());
+            System.out.printf("  Disponível  : %d unidade(s) - ÚLTIMAS UNIDADES!%n", p.getQuantidadeEstoque());
         } else {
-            System.out.printf("  Disponível  : %d unidade(s) em estoque%n",
-                    p.getQuantidadeEstoque());
+            System.out.printf("  Disponível  : %d unidade(s) em estoque%n", p.getQuantidadeEstoque());
         }
     }
 
-    /** Exibe contato do vendedor ao encerrar a sessão do cliente. */
     private void exibirContatoVendedor() {
         String whatsapp = Dados.getPropriedade("loja.whatsapp");
         String nomeLoja = Dados.getPropriedade("loja.nome");
 
+        String nomeExibido = nomeLoja.isBlank() ? "nossa loja" : nomeLoja;
+        String whatsappExibido = whatsapp.isBlank() ? "(31) 998090806" : whatsapp;
+
         System.out.println();
         ConsoleUtil.separadorDuplo();
-        ConsoleUtil.linha("Obrigado por visitar " + (nomeLoja.isBlank() ? "nossa loja" : nomeLoja) + "!");
+        ConsoleUtil.linha("Obrigado por visitar " + nomeExibido + "!");
         ConsoleUtil.linha("Para atendimento personalizado, entre em contato pelo WhatsApp:");
         ConsoleUtil.linha("");
-        System.out.println("     WhatsApp: " + (whatsapp.isBlank() ? "(11) 91234-5678" : whatsapp));
+        System.out.println("     WhatsApp: " + whatsappExibido);
         ConsoleUtil.linha("");
         ConsoleUtil.linha("Será um prazer atendê-lo!");
         ConsoleUtil.separadorDuplo();
@@ -144,8 +143,8 @@ public class MenuCliente {
     }
 
     private String truncar(String s, int max) {
-        if (s == null)
-            return "-";
-        return s.length() > max ? s.substring(0, max - 1) + "…" : s;
+        if (s == null) return "-";
+        if (s.length() > max) return s.substring(0, max - 1) + "…";
+        return s;
     }
 }

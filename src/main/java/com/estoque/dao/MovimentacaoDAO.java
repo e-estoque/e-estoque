@@ -8,14 +8,10 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class MovimentacaoDAO {
 
-    // ------------------------------------------------------------------
-    // CREATE - atômico via synchronized
-    // ------------------------------------------------------------------
-    public synchronized int registrar(MovimentacaoEstoque mov) {
+    public int registrar(MovimentacaoEstoque mov) {
         Produto p = Dados.produtos.get(mov.getProdutoId());
         if (p == null) {
             throw new IllegalStateException("Produto ID " + mov.getProdutoId() + " não encontrado.");
@@ -24,17 +20,15 @@ public class MovimentacaoDAO {
         int estoqueAtual = p.getQuantidadeEstoque();
         int novaQtd;
 
-        switch (mov.getTipo()) {
-            case ENTRADA -> novaQtd = estoqueAtual + mov.getQuantidade();
-            case SAIDA -> {
-                if (mov.getQuantidade() > estoqueAtual) {
-                    throw new IllegalStateException(
-                            "Estoque insuficiente. Disponível: " + estoqueAtual +
-                                    " | Solicitado: " + mov.getQuantidade());
-                }
-                novaQtd = estoqueAtual - mov.getQuantidade();
+        if (mov.getTipo() == MovimentacaoEstoque.Tipo.ENTRADA) {
+            novaQtd = estoqueAtual + mov.getQuantidade();
+        } else { // SAIDA
+            if (mov.getQuantidade() > estoqueAtual) {
+                throw new IllegalStateException(
+                    "Estoque insuficiente. Disponível: " + estoqueAtual +
+                    " | Solicitado: " + mov.getQuantidade());
             }
-            default -> throw new IllegalStateException("Tipo de movimentação desconhecido.");
+            novaQtd = estoqueAtual - mov.getQuantidade();
         }
 
         int id = Dados.nextMovimentacaoId();
@@ -46,46 +40,39 @@ public class MovimentacaoDAO {
         return id;
     }
 
-    // ------------------------------------------------------------------
-    // READ - listar todas
-    // ------------------------------------------------------------------
     public List<MovimentacaoEstoque> listarTodas() {
-        return Dados.movimentacoes.stream()
-                .sorted(Comparator.comparing(MovimentacaoEstoque::getDataMovimentacao).reversed())
-                .map(this::comNomeProduto)
-                .collect(Collectors.toList());
+        List<MovimentacaoEstoque> lista = new ArrayList<>(Dados.movimentacoes);
+
+        for (MovimentacaoEstoque m : lista) {
+            preencherNomeProduto(m);
+        }
+
+        lista.sort((a, b) -> b.getDataMovimentacao().compareTo(a.getDataMovimentacao()));
+        return lista;
     }
 
-    // ------------------------------------------------------------------
-    // READ - por produto
-    // ------------------------------------------------------------------
     public List<MovimentacaoEstoque> listarPorProduto(int produtoId) {
-        return Dados.movimentacoes.stream()
-                .filter(m -> m.getProdutoId() == produtoId)
-                .sorted(Comparator.comparing(MovimentacaoEstoque::getDataMovimentacao).reversed())
-                .map(this::comNomeProduto)
-                .collect(Collectors.toList());
+        List<MovimentacaoEstoque> lista = new ArrayList<>();
+
+        for (MovimentacaoEstoque m : Dados.movimentacoes) {
+            if (m.getProdutoId() == produtoId) {
+                preencherNomeProduto(m);
+                lista.add(m);
+            }
+        }
+
+        lista.sort((a, b) -> b.getDataMovimentacao().compareTo(a.getDataMovimentacao()));
+        return lista;
     }
 
-    // ------------------------------------------------------------------
-    // READ - gastos mensais (entradas)
-    // ------------------------------------------------------------------
     public List<Object[]> gastosMensais(int meses) {
-        return agruparPorMes(MovimentacaoEstoque.Tipo.ENTRADA,
-                LocalDateTime.now().minusMonths(meses));
+        return agruparPorMes(MovimentacaoEstoque.Tipo.ENTRADA, LocalDateTime.now().minusMonths(meses));
     }
 
-    // ------------------------------------------------------------------
-    // READ - vendas mensais (saídas)
-    // ------------------------------------------------------------------
     public List<Object[]> vendasMensais(int meses) {
-        return agruparPorMes(MovimentacaoEstoque.Tipo.SAIDA,
-                LocalDateTime.now().minusMonths(meses));
+        return agruparPorMes(MovimentacaoEstoque.Tipo.SAIDA, LocalDateTime.now().minusMonths(meses));
     }
 
-    // ------------------------------------------------------------------
-    // READ - totais do mês atual
-    // ------------------------------------------------------------------
     public BigDecimal totalVendasMesAtual() {
         return somarMesAtual(MovimentacaoEstoque.Tipo.SAIDA);
     }
@@ -94,57 +81,65 @@ public class MovimentacaoDAO {
         return somarMesAtual(MovimentacaoEstoque.Tipo.ENTRADA);
     }
 
-    // ------------------------------------------------------------------
-    // READ - média de vendas dos últimos N meses
-    // ------------------------------------------------------------------
     public BigDecimal mediaVendasMensaisUltimos(int meses) {
         List<Object[]> vendas = vendasMensais(meses);
-        if (vendas.isEmpty())
+        if (vendas.isEmpty()) {
             return BigDecimal.ZERO;
-        BigDecimal soma = vendas.stream()
-                .map(row -> (BigDecimal) row[2])
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        BigDecimal soma = BigDecimal.ZERO;
+        for (Object[] row : vendas) {
+            soma = soma.add((BigDecimal) row[2]);
+        }
+
         return soma.divide(BigDecimal.valueOf(vendas.size()), 2, RoundingMode.HALF_UP);
     }
 
-    // ------------------------------------------------------------------
-    // Helpers
-    // ------------------------------------------------------------------
+    // Agrupa movimentações por mês, retornando lista com [ano, mês, total, quantidade]
     private List<Object[]> agruparPorMes(MovimentacaoEstoque.Tipo tipo, LocalDateTime limite) {
-        // TreeMap com ordem decrescente de YearMonth
         Map<YearMonth, Object[]> mapa = new TreeMap<>(Comparator.reverseOrder());
 
-        Dados.movimentacoes.stream()
-                .filter(m -> m.getTipo() == tipo
-                        && m.getDataMovimentacao() != null
-                        && m.getDataMovimentacao().isAfter(limite))
-                .forEach(m -> {
-                    YearMonth ym = YearMonth.from(m.getDataMovimentacao());
-                    Object[] row = mapa.computeIfAbsent(ym,
-                            k -> new Object[] { ym.getYear(), ym.getMonthValue(), BigDecimal.ZERO, 0 });
-                    row[2] = ((BigDecimal) row[2]).add(m.getValorTotal());
-                    row[3] = (int) row[3] + 1;
-                });
+        for (MovimentacaoEstoque m : Dados.movimentacoes) {
+            if (m.getTipo() != tipo) continue;
+            if (m.getDataMovimentacao() == null) continue;
+            if (!m.getDataMovimentacao().isAfter(limite)) continue;
+
+            YearMonth ym = YearMonth.from(m.getDataMovimentacao());
+
+            if (!mapa.containsKey(ym)) {
+                mapa.put(ym, new Object[]{ym.getYear(), ym.getMonthValue(), BigDecimal.ZERO, 0});
+            }
+
+            Object[] row = mapa.get(ym);
+            row[2] = ((BigDecimal) row[2]).add(m.getValorTotal());
+            row[3] = (int) row[3] + 1;
+        }
 
         return new ArrayList<>(mapa.values());
     }
 
     private BigDecimal somarMesAtual(MovimentacaoEstoque.Tipo tipo) {
-        YearMonth atual = YearMonth.now();
-        return Dados.movimentacoes.stream()
-                .filter(m -> m.getTipo() == tipo
-                        && m.getDataMovimentacao() != null
-                        && YearMonth.from(m.getDataMovimentacao()).equals(atual))
-                .map(MovimentacaoEstoque::getValorTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        YearMonth mesAtual = YearMonth.now();
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (MovimentacaoEstoque m : Dados.movimentacoes) {
+            if (m.getTipo() == tipo && m.getDataMovimentacao() != null) {
+                YearMonth mesMov = YearMonth.from(m.getDataMovimentacao());
+                if (mesMov.equals(mesAtual)) {
+                    total = total.add(m.getValorTotal());
+                }
+            }
+        }
+
+        return total;
     }
 
-    private MovimentacaoEstoque comNomeProduto(MovimentacaoEstoque m) {
+    private void preencherNomeProduto(MovimentacaoEstoque m) {
         if (m.getNomeProduto() == null) {
             Produto p = Dados.produtos.get(m.getProdutoId());
-            if (p != null)
+            if (p != null) {
                 m.setNomeProduto(p.getNome());
+            }
         }
-        return m;
     }
 }

@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compilar",
+            "type": "shell",
+            "command": "javac",
+            "args": [
+                "-encoding", "UTF-8",
+                "--release", "17",
+                "-cp", "${userHome}\\.m2\\repository\\com\\google\\code\\gson\\gson\\2.11.0\\gson-2.11.0.jar",
+                "-d", "${workspaceFolder}\\target\\classes",
+                "${workspaceFolder}\\src\\main\\java\\com\\estoque\\api\\*.java",
+                "${workspaceFolder}\\src\\main\\java\\com\\estoque\\dao\\*.java",
+                "${workspaceFolder}\\src\\main\\java\\com\\estoque\\model\\*.java",
+                "${workspaceFolder}\\src\\main\\java\\com\\estoque\\relatorio\\*.java",
+                "${workspaceFolder}\\src\\main\\java\\com\\estoque\\util\\*.java",
+                "${workspaceFolder}\\src\\main\\java\\com\\estoque\\view\\*.java",
+                "${workspaceFolder}\\src\\main\\java\\com\\estoque\\Main.java"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$javac"
+        }
+    ]
+}

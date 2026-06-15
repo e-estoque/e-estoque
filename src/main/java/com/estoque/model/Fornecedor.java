@@ -1,9 +1,5 @@
 package com.estoque.model;
 
-/**
- * Fornecedor - estende Pessoa (herança).
- * Possui endereço preenchível via ViaCEP.
- */
 public class Fornecedor extends Pessoa {
 
     private int id;
@@ -21,17 +17,11 @@ public class Fornecedor extends Pessoa {
         this.id = id;
     }
 
-    // ------------------------------------------------------------------
-    // Implementação do método abstrato
-    // ------------------------------------------------------------------
     @Override
     public String getTipoPessoa() {
         return "FORNECEDOR";
     }
 
-    // ------------------------------------------------------------------
-    // Getters e Setters
-    // ------------------------------------------------------------------
     public int getId() {
         return id;
     }
@@ -40,40 +30,46 @@ public class Fornecedor extends Pessoa {
         this.id = id;
     }
 
-    // Atalhos para campos do Endereco (composição)
     public String getCep() {
-        return getEndereco() != null ? getEndereco().getCep() : "";
+        if (getEndereco() != null) return getEndereco().getCep();
+        return "";
     }
 
     public String getLogradouro() {
-        return getEndereco() != null ? getEndereco().getLogradouro() : "";
+        if (getEndereco() != null) return getEndereco().getLogradouro();
+        return "";
     }
 
     public String getNumero() {
-        return getEndereco() != null ? getEndereco().getNumero() : "";
+        if (getEndereco() != null) return getEndereco().getNumero();
+        return "";
     }
 
     public String getComplemento() {
-        return getEndereco() != null ? getEndereco().getComplemento() : "";
+        if (getEndereco() != null) return getEndereco().getComplemento();
+        return "";
     }
 
     public String getBairro() {
-        return getEndereco() != null ? getEndereco().getBairro() : "";
+        if (getEndereco() != null) return getEndereco().getBairro();
+        return "";
     }
 
     public String getCidade() {
-        return getEndereco() != null ? getEndereco().getCidade() : "";
+        if (getEndereco() != null) return getEndereco().getCidade();
+        return "";
     }
 
     public String getUf() {
-        return getEndereco() != null ? getEndereco().getUf() : "";
+        if (getEndereco() != null) return getEndereco().getUf();
+        return "";
     }
 
     @Override
     public String toString() {
+        String contatoStr = getContato() == null ? "-" : getContato();
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("ID: %-4d | %-30s | Contato: %-20s",
-                id, getNome(), getContato() == null ? "-" : getContato()));
+        sb.append(String.format("ID: %-4d | %-30s | Contato: %-20s", id, getNome(), contatoStr));
         if (getEndereco() != null) {
             sb.append("\n         Endereço: ").append(getEndereco());
         }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/andra/OneDrive/Documentos/CÓDIGOS/TRABALHO JAVA/**)",
+      "Bash(mvn clean *)",
+      "PowerShell(Get-Command mvn -ErrorAction SilentlyContinue; $env:JAVA_HOME; $env:PATH -split \";\" | Where-Object { $_ -match \"maven|java|jdk\" -and $_ -ne \"\" })"
+    ]
+  }
+}

@@ -9,21 +9,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
-/**
- * Relatório de Previsão de Gastos Futuros.
- *
- * Lógica de previsão:
- * 1. Calcula a média de vendas mensais dos últimos 3 meses.
- * 2. Para produtos com estoque abaixo do mínimo, estima compras necessárias:
- * quantidade_a_comprar = estoque_minimo * 5 - estoque_atual
- * custo_estimado = quantidade * preco_compra
- * 3. Soma tudo para gerar a previsão total de gastos do próximo mês.
- *
- * Implementa a interface Relatorio.
- */
 public class RelatorioPrevisao implements Relatorio {
 
-    // Quantidade multiplicadora do estoque mínimo para calcular reposição
+    // Quantas vezes o estoque mínimo devemos repor quando o produto está em baixa
     private static final int MULTIPLICADOR_REPOSICAO = 5;
     private static final int MESES_HISTORICO = 3;
 
@@ -39,7 +27,6 @@ public class RelatorioPrevisao implements Relatorio {
     public void gerar() {
         ConsoleUtil.titulo(getTitulo());
 
-        // 1. Média de vendas mensais
         BigDecimal mediaVendas = movimentacaoDAO
                 .mediaVendasMensaisUltimos(MESES_HISTORICO)
                 .setScale(2, RoundingMode.HALF_UP);
@@ -47,13 +34,12 @@ public class RelatorioPrevisao implements Relatorio {
         ConsoleUtil.subtitulo("Base histórica (últimos " + MESES_HISTORICO + " meses)");
         System.out.printf("  Média de receita mensal:  R$ %,.2f%n", mediaVendas);
 
-        // Estimativa de compras = 60% da receita média (margem típica de 40%)
-        BigDecimal estimativaComprasBásica = mediaVendas
+        // Estimativa de compras = 60% da receita (margem típica de 40%)
+        BigDecimal estimativaComprasBasica = mediaVendas
                 .multiply(BigDecimal.valueOf(0.60))
                 .setScale(2, RoundingMode.HALF_UP);
-        System.out.printf("  Estimativa base (60%%):   R$ %,.2f%n", estimativaComprasBásica);
+        System.out.printf("  Estimativa base (60%%):   R$ %,.2f%n", estimativaComprasBasica);
 
-        // 2. Produtos abaixo do estoque mínimo
         List<Produto> abaixoMinimo = produtoDAO.listarAbaixoEstoqueMinimo();
 
         ConsoleUtil.subtitulo("Reposições Urgentes - Estoque Abaixo do Mínimo");
@@ -67,12 +53,11 @@ public class RelatorioPrevisao implements Relatorio {
 
             BigDecimal totalReposicao = BigDecimal.ZERO;
 
-            // for iterando produtos abaixo do mínimo
             for (Produto p : abaixoMinimo) {
-                int qtdRepor = (p.getEstoqueMinimo() * MULTIPLICADOR_REPOSICAO)
-                        - p.getQuantidadeEstoque();
-                if (qtdRepor < 0)
+                int qtdRepor = (p.getEstoqueMinimo() * MULTIPLICADOR_REPOSICAO) - p.getQuantidadeEstoque();
+                if (qtdRepor < 0) {
                     qtdRepor = 0;
+                }
 
                 BigDecimal custoEst = p.getPrecoCompra()
                         .multiply(BigDecimal.valueOf(qtdRepor))
@@ -89,25 +74,20 @@ public class RelatorioPrevisao implements Relatorio {
             }
 
             ConsoleUtil.separador();
-            System.out.printf("  Total estimado para reposição urgente: R$ %,.2f%n",
-                    totalReposicao);
+            System.out.printf("  Total estimado para reposição urgente: R$ %,.2f%n", totalReposicao);
 
-            // 3. Previsão total
             ConsoleUtil.subtitulo("Previsão Total de Gastos - Próximo Mês");
-            BigDecimal previsaoTotal = estimativaComprasBásica.add(totalReposicao);
+            BigDecimal previsaoTotal = estimativaComprasBasica.add(totalReposicao);
 
-            System.out.printf("  Compras de rotina (estimativa):   R$ %,.2f%n",
-                    estimativaComprasBásica);
-            System.out.printf("  Reposições urgentes:               R$ %,.2f%n",
-                    totalReposicao);
-            System.out.printf("  PREVISÃO TOTAL:                    R$ %,.2f%n",
-                    previsaoTotal);
+            System.out.printf("  Compras de rotina (estimativa):   R$ %,.2f%n", estimativaComprasBasica);
+            System.out.printf("  Reposições urgentes:               R$ %,.2f%n", totalReposicao);
+            System.out.printf("  PREVISÃO TOTAL:                    R$ %,.2f%n", previsaoTotal);
         }
     }
 
     private String truncar(String s, int max) {
-        if (s == null)
-            return "-";
-        return s.length() > max ? s.substring(0, max - 1) + "…" : s;
+        if (s == null) return "-";
+        if (s.length() > max) return s.substring(0, max - 1) + "…";
+        return s;
     }
 }

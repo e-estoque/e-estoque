@@ -20,7 +20,7 @@ public class MenuPrincipal {
                 case 2 -> menuCliente.iniciar();
                 case 0 -> {
                     ConsoleUtil.titulo("Até logo!");
-                    System.out.println("  Obrigado por usar o Sistema de Controle de Estoque.");
+                    System.out.println("  Obrigado por usar o sistema Minas Fogões!");
                     System.out.println();
                     executando = false;
                 }
@@ -30,7 +30,7 @@ public class MenuPrincipal {
     }
 
     private void exibirMenuPrincipal() {
-        ConsoleUtil.titulo("Sistema de Controle de Estoque");
+        ConsoleUtil.titulo("Minas Fogões - Sistema de Estoque");
         ConsoleUtil.linha("Selecione o perfil de acesso:");
         System.out.println();
         ConsoleUtil.linha("[1] Lojista  (acesso administrativo)");
@@ -41,10 +41,10 @@ public class MenuPrincipal {
 
     private void exibirBannerInicial() {
         System.out.println();
-        System.out.println("  ╔═══════════════════════════════════════════════════╗");
-        System.out.println("  ║     SISTEMA DE CONTROLE DE ESTOQUE v1.0           ║");
-        System.out.println("  ║     Integração ViaCEP | Terminal | Memória        ║");
-        System.out.println("  ╚═══════════════════════════════════════════════════╝");
+        System.out.println("  ╔══════════════════════════════════════════════════╗");
+        System.out.println("  ║     SISTEMA DE CONTROLE DE ESTOQUE               ║");
+        System.out.println("  ║     INTEGRADO AO ATENDIMENTO MINAS FOGÕES        ║");
+        System.out.println("  ╚══════════════════════════════════════════════════╝");
         System.out.println();
     }
 }
